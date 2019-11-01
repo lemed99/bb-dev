@@ -1,10 +1,179 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet">
+        <script
+                src="https://code.jquery.com/jquery-3.4.1.min.js"
+                integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+                crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.2.2/jszip.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+        <title>BB</title>
+        <style>
+            .lds-dual-ring {
+                display: inline-block;
+                width: 26px;
+                height: 26px;
+            }
+            .lds-dual-ring:after {
+                content: " ";
+                display: block;
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                border: 3px solid #4299e1;
+                border-color: #4299e1 transparent #4299e1 transparent;
+                animation: lds-dual-ring 1.2s linear infinite;
+            }
+            @keyframes lds-dual-ring {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+    </head>
+    <body class="w-screen bg-gray-300" style="font-family: 'Montserrat', sans-serif;">
+    <div class="w-full max-w-xs mx-auto mt-32">
+        <form class="bg-white shadow-lg rounded px-8 pt-6 pb-8 mb-4">
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="grid-state">
+                    Region
+                </label>
+                <div class="relative">
+                    <select class="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500" id="grid-state">
+                        <option>Bohicon</option>
+                        <option>Dassa</option>
+                        <option>Godomey</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
+                    Nom
+                </label>
+                <input class="shadow appearance-none border border-blue-500 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none" id="username" type="text">
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                    Mot de passe
+                </label>
+                <input class="shadow appearance-none border border-blue-500 rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none" id="password" type="password">
+            </div>
+            <div id="dossier" class="relative h-10 mb-4 shadow border border-blue-500 bg-blue-500 rounded w-full py-2 px-3 font-bold mb-3 leading-tight text-center text-white">
+                Chargez le dossier
+                <input id="file" style="font-size: 0" class="absolute top-0 left-0 opacity-0 w-full h-full cursor-pointer" type="file" multiple webkitdirectory>
+            </div>
+            <div id="loader" class="hidden justify-center mb-4">
+                <div class="lds-dual-ring"></div>
+            </div>
+            <button type="button" id="envoyer" disabled class="focus cursor-not-allowed border-blue-200 bg-blue-200 cursor-pointer h-10 mb-4 shadow border rounded w-full py-2 px-3 font-bold mb-3 leading-tight text-center text-white">
+                Envoyer
+            </button>
+            <div id="load" class="hidden justify-center">
+                <div class="lds-dual-ring"></div>
+            </div>
+            <button type="button" id="terminer"  class="hidden border-blue-500 bg-blue-500 cursor-pointer h-10  mb-2 shadow border rounded w-full py-2 px-3 font-bold mb-3 leading-tight text-center text-white">
+                Terminer
+            </button>
+        </form>
+    </div>
 
-</body>
-</html>
+    <script>
+        $(document).ready(function () {
+
+            const date = moment().subtract(1,'days').format("DD-MM-YYYY");
+            let region;
+
+            document.getElementById('grid-state').addEventListener("change", function () {
+                region = document.getElementById('grid-state').value;
+            });
+
+            var dossier = null;
+
+            document.getElementById('file').addEventListener("change", getSelectedFile);
+            document.getElementById('envoyer').addEventListener("click", uploadToDropbox);
+            document.getElementById('terminer').addEventListener("click", function () {
+                location.reload();
+            });
+
+            function create_zip(file) {
+                document.getElementById('loader').classList.remove("hidden");
+                document.getElementById('loader').classList.add("flex");
+                var zip = new JSZip(),
+                    len = file.length,
+                    i;
+
+                for(i=0;i<len;i+=1){
+                    zip.file(file[i].name, file[i]);
+                }
+
+                zip.generateAsync({
+                    type:"blob",
+                    compression: "DEFLATE",
+                    compressionOptions: {
+                        level: 9
+                    }
+                })
+                    .then(function(content) {
+                        dossier = content;
+                        document.getElementById('envoyer').classList.remove("cursor-not-allowed", "border-blue-200", "bg-blue-200");
+                        document.getElementById('envoyer').classList.add("border-blue-500", "bg-blue-500");
+                        $('#envoyer').removeAttr("disabled");
+                        document.getElementById('loader').classList.remove("flex");
+                        document.getElementById('loader').classList.add("hidden");
+                        document.getElementById('dossier').classList.remove("border-blue-500", "bg-blue-500");
+                        document.getElementById('file').classList.remove("cursor-pointer");
+                        document.getElementById('dossier').classList.add("border-blue-200", "bg-blue-200");
+                        document.getElementById('file').classList.add("cursor-not-allowed");
+                    });
+
+            }
+
+            function getSelectedFile() {
+                const file = document.getElementById('file').files;
+
+                if(file) {
+                    create_zip(file);
+                }
+
+            }
+
+            function uploadToDropbox() {
+                document.getElementById('load').classList.remove("hidden");
+                document.getElementById('load').classList.add("flex");
+                $.ajax({
+                    url: 'https://content.dropboxapi.com/2/files/upload',
+                    type: 'post',
+                    data: dossier,
+                    processData: false,
+                    contentType: 'application/octet-stream',
+                    headers: {
+                        "Authorization": "Bearer v8s9azzyMSAAAAAAAAAAD6lmxIyw9O7YRrqTZf_oIxxxty8RQkVXvQw8UhUiHfhj",
+                        "Dropbox-API-Arg": '{"path": "/'+region+'/'+date+'","mode": "add","autorename": true,"mute": false}'
+                    },
+                    success: function () {
+                        document.getElementById('load').classList.remove("flex");
+                        document.getElementById('load').classList.add("hidden");
+                        $('#envoyer').off('click');
+                        document.getElementById('envoyer').classList.remove("border-blue-500", "bg-blue-500");
+                        document.getElementById('envoyer').classList.add("cursor-not-allowed", "border-blue-200", "bg-blue-200");
+                        document.getElementById('terminer').classList.remove("hidden");
+                        document.getElementById('terminer').classList.add("block");
+                    },
+                    error: function (data) {
+                        console.error(data);
+                    }
+                })
+            }
+        });
+    </script>
+    </body>
+    </html>
